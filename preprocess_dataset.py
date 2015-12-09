@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 """
-Reads the images - crops pedestrian examples with sufficient additional padding (-p)
+Reads the images, crops pedestrian examples with sufficient additional padding (-p),
 and saves the result in a single file for fast loading.
 
-For convenience we save two copies of each crop - original and mirrored.
+For convenience, we save two copies of each crop - original and mirrored.
 For the mirrored example, the labels are adjusted accordingly. Note, that this is non-trivial
 because the bag attributes depend on the orientation.
 """
@@ -236,6 +236,6 @@ if __name__ == '__main__':
     args.git_revision = git.current_revision(path.dirname(__file__))
 
     recreate_dir(args.output_dir)
-
+    # save parameters to file (for reproducibility of results)
     dump_args(args, args.output_dir)
     main(args)

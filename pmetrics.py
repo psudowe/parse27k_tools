@@ -102,7 +102,7 @@ def precision_recall(groundtruth, predictions):
 
 def accuracy(confmat, ignore_na=False):
     """
-    Take: confusion matrix (columns - predictions - rows groundtruth)
+    Parameters: confusion matrix (columns - predictions - rows groundtruth)
     Return: Accuracy percentage (0-100%)
 
     ignore_na -- if True (default False!) -- this will ignore the first class
@@ -129,6 +129,10 @@ def accuracy(confmat, ignore_na=False):
 
 def balanced_error_rate(confmat):
     """
+    Compute balanced error rate
+
+    Parameters: confmat as computed by compute_confmat.
+    Returns: float BER
     """
     if confmat.shape[0] != confmat.shape[1]:
         raise ValueError('non-square confusion matrix')
@@ -158,8 +162,11 @@ def softmax_to_confmat(gtlabels, predictions):
 
 def compute_confmat(gtlabels, predictions):
     """ compute a confusion matrix
-    - gtlabels -- the groundtruth (as index in range [0..N) for N classes
-    - predictions -- same format as groundtruth
+    Parameters:
+      - gtlabels -- the groundtruth (as index in range [0..N) for N classes
+      - predictions -- same format as groundtruth
+    Returns:
+      confusion matrix
     """
     N = np.max(gtlabels)
     NP = np.max(predictions)
@@ -173,6 +180,9 @@ def compute_confmat(gtlabels, predictions):
 
 def softmax_prediction_to_binary(predictions, ignore_na=True):
     """
+    Transform a softmax prediction for a binary (2+1) attribute, to
+    a single value, while ignoring the NA class (first column)
+    This transformation obviously only makes sense for (2 or 2+1 columns).
 
     Parameters:
       predictions     np.array  N x K entries (K=3)
