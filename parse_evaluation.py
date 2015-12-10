@@ -11,7 +11,6 @@ from __future__ import print_function
 import sys
 from argparse import ArgumentParser
 import numpy as np
-import json
 import h5py
 from collections import OrderedDict
 
@@ -45,7 +44,15 @@ def evaluate_retrieval(groundtruth, predictions):
     '''
     measures = {}
     confmat = pmetrics.softmax_to_confmat(groundtruth, predictions)
-    measures['accuracy'] = pmetrics.accuracy(confmat)
+
+    # check if there were predictions for the first class
+    # which is not supposed to happen in retrieval mode
+    if np.any(confmat[:,0] > 0):
+        raise ValueError('retrieval mode - but there were predictions for N/A class')
+
+    # this compute the two class accuracy - it does not reflect performance on the
+    # exmaples with N/A groundtruth label
+    measures['accuracy'] = pmetrics.accuracy(confmat, ignore_na=True)
 
     if predictions.shape[1] == 3:
         # predictions need to be converted to a continous score before
@@ -157,15 +164,10 @@ def main(args):
     report = generate_report(eval_results)
     # output the results
     if args.verbose or args.output is None:
-        print(eval_results)
         print(report)
     if args.output:
         f = open(args.output+'.txt', 'w')
         f.write(report)
-        f.close()
-
-        f = open(args.output+'.json', 'w')
-        f.write(json.dumps(vars(eval_results), sort_keys=True, indent=4))
         f.close()
 
 if __name__ == '__main__':
@@ -173,7 +175,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', '-v', action='store_true')
     parser.add_argument('groundtruth', help='HDF5 file with groundtruth labels')
     parser.add_argument('predictions', help='HDF5 file with model predictions')
-    parser.add_argument('--output', '-o', help='filename for JSON eval results & report file')
+    parser.add_argument('--output', '-o', help='filename for eval results report file')
     parser.add_argument('--mode', '-m',
                         choices=('retrieval', 'classification'), default='retrieval',
                         help='evaluate with N/A labels (i.e. BER) '
