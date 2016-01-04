@@ -210,6 +210,6 @@ def labels_to_binary(labels):
         raise ValueError('too large gt value observed')
     if np.any( labels < 0):
         raise ValueError('label already has a negative value')
-    out = labels
+    out = np.copy(labels)
     out[ labels == 2 ] = -1
     return out
