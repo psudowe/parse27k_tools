@@ -24,7 +24,7 @@ from PIL import Image
 from attribute_datasets import DataPreprocessorPARSE as PARSE
 from pUtils import git, dump_args, recreate_dir
 
-def crop(imgfn, box, target_size, padding, mirror=False):
+def crop(imgfn, box, target_size, padding, padding_mode='zero', mirror=False):
     '''
     Load an image and crop bounding box from it.
     Handles additional padding - if the box is too close to the image boundary,
@@ -39,6 +39,8 @@ def crop(imgfn, box, target_size, padding, mirror=False):
          ( then adapt in x-direction s.t. it matches target_size[0])
 
       padding: number of pixels of additional padding around the bounding box
+
+      padding_mode: 'zero' or 'edge' - controls how the padded pixels are filled
 
       mirror: if true - the resulting crop is mirrored (reversed x-axis)
 
@@ -83,16 +85,16 @@ def crop(imgfn, box, target_size, padding, mirror=False):
         pad_offset = np.max(target_size) + padding
         pb = [int(x+pad_offset) for x in pb]
 
-        if args.padding_mode == 'edge':
+        if padding_mode == 'edge':
             img = pad(img_l, [(pad_offset, pad_offset),
                               (pad_offset, pad_offset),
                               (0,0)], mode='edge')
-        elif args.padding_mode == 'zero':
+        elif padding_mode == 'zero':
             img = pad(img_l, [(pad_offset, pad_offset),
                               (pad_offset, pad_offset),
                               (0,0)], mode='constant', constant_values=0)
         else:
-            raise NotImplemented('padding mode not implemented: ', args.padding_mode)
+            raise NotImplemented('padding mode not implemented: ', padding_mode)
     else:
         img = img_l # no extra padding around the image required
 
@@ -108,7 +110,7 @@ def crop(imgfn, box, target_size, padding, mirror=False):
 def do_one_crop(e):
     c = crop(e.image_filename, e.box,
              (args.width, args.height),
-             padding=args.padding, mirror=False)
+             padding=args.padding, padding_mode=args.padding_mode, mirror=False)
     return c, e.labels(), e.labels(mirrored=True), e.pid
 
 def preprocess_examples(args, examples, include_mirrors=True):
