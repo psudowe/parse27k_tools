@@ -51,6 +51,7 @@ def crop(imgfn, box, target_size, padding, padding_mode='zero', mirror=False):
     '''
     img = np.array(Image.open(imgfn).convert('RGB'))
     cur_h, cur_w, cur_c = img.shape
+    box = np.array(box, dtype=np.float64)
 
     # 1. rescale the whole image s.t. bounding box has target height
     # 2. adapt box accordingly (scale to the new image dim, then adapt width)
@@ -61,29 +62,36 @@ def crop(imgfn, box, target_size, padding, padding_mode='zero', mirror=False):
     sf = float(target_size[1]) / (box[3]-box[1])
 
     # 1.
-    img_l = transform.resize(img, (int(cur_h * sf), int(cur_w * sf), cur_c))
-    pb = [np.floor(sf*x + .5) for x in box]
+    img_l = transform.resize(img, (np.floor(cur_h*sf+.5), np.floor(cur_w*sf+.5), cur_c))
+    sbox = box * sf
 
     # 2.
-    delta = (target_size[0]-(pb[2]-pb[0])) / 2.0
-    pb[0] -= np.floor(delta + 0.5)
-    pb[2] += np.floor(delta)
-    if pb[2]-pb[0] <> target_size[0]:
-        raise Exception('new box width does not match target')
-    if pb[3]-pb[1] <> target_size[1]:
-        raise Exception('new box height does not match target')
+    delta = (target_size[0]-(sbox[2]-sbox[0])) / 2.0
+    sbox[0] -= delta
+    sbox[2] += delta
+
+    sbox = np.floor(sbox +.5).astype(np.int32)
+    if sbox[2]-sbox[0] <> target_size[0]:
+        if sbox[2]-sbox[0] - 1 == target_size[0]:
+            sbox[2] -= 1
+        else:
+            raise Exception('new box width does not match target')
+    if sbox[3]-sbox[1] <> target_size[1]:
+        if sbox[3]-sbox[1] - 1 == target_size[1]:
+            sbox[3] -= 1
+        else:
+            raise Exception('new box height does not match target')
 
     # 3a
-    pb[0] -= padding # the padding around bounding box (not the whole image)
-    pb[1] -= padding
-    pb[2] += padding
-    pb[3] += padding
-    pb = [int(x) for x in pb]
+    sbox[0] -= padding # the padding around bounding box (not the whole image)
+    sbox[1] -= padding
+    sbox[2] += padding
+    sbox[3] += padding
 
     # 3b
-    if pb[0] < 0 or pb[1] < 0 or pb[2] >= img_l.shape[1] or pb[3] >= img_l.shape[0]:
+    if sbox[0] < 0 or sbox[1] < 0 or sbox[2] >= img_l.shape[1] or sbox[3] >= img_l.shape[0]:
         pad_offset = np.max(target_size) + padding
-        pb = [int(x+pad_offset) for x in pb]
+        sbox = sbox + pad_offset
 
         if padding_mode == 'edge':
             img = pad(img_l, [(pad_offset, pad_offset),
@@ -100,10 +108,9 @@ def crop(imgfn, box, target_size, padding, padding_mode='zero', mirror=False):
 
     # 4.
     if mirror:
-        acrop = img[pb[1]:pb[3], pb[2]:pb[0]:-1, :] # reversed x-dimension
+        acrop = img[sbox[1]:sbox[3], sbox[2]:sbox[0]:-1, :] # reversed x-dimension
     else:
-        acrop = img[pb[1]:pb[3], pb[0]:pb[2], :]
-    # transform and pad implicitly convert to float32 (range [0,1])
+        acrop = img[sbox[1]:sbox[3], sbox[0]:sbox[2], :]
     out = (255. * acrop).astype(np.uint8)
     return out.transpose((2,1,0)) # transpose to (c,w,h)
 
